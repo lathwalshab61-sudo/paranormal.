@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport" />
+  <meta content="mobile_tab" name="shell-type" />
+  <title>Beyond the Unknown | BTU Division Standalone React</title>
+  
+  <link href="https://fonts.googleapis.com" rel="preconnect" />
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  
+  <!-- React 18 & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Babel for JSX compilation in-browser -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "inverse-on-surface": "#303034",
+            "on-error": "#690005",
+            "primary-fixed-dim": "#d0bcff",
+            "on-secondary-fixed-variant": "#004e5c",
+            "primary": "#d0bcff",
+            "primary-fixed": "#e9ddff",
+            "on-primary-fixed-variant": "#5516be",
+            "tertiary-container": "#ff5451",
+            "surface-container-highest": "#353439",
+            "outline": "#958ea0",
+            "on-primary-fixed": "#23005c",
+            "tertiary-fixed-dim": "#ffb3ad",
+            "on-surface": "#e4e1e7",
+            "secondary-fixed": "#acedff",
+            "surface": "#131317",
+            "surface-container-high": "#2a292e",
+            "surface-tint": "#d0bcff",
+            "surface-container-lowest": "#0e0e12",
+            "surface-bright": "#39393d",
+            "tertiary": "#ffb3ad",
+            "background": "#131317",
+            "on-primary-container": "#340080",
+            "surface-dim": "#131317",
+            "tertiary-fixed": "#ffdad7",
+            "secondary-container": "#03b5d3",
+            "on-tertiary-fixed-variant": "#930013",
+            "surface-container": "#1f1f23",
+            "on-secondary-fixed": "#001f26",
+            "inverse-primary": "#6d3bd7",
+            "on-secondary": "#003640",
+            "on-background": "#e4e1e7",
+            "error-container": "#93000a",
+            "secondary": "#4cd7f6",
+            "on-tertiary": "#68000a",
+            "on-surface-variant": "#cbc3d7",
+            "on-tertiary-fixed": "#410004",
+            "outline-variant": "#494454",
+            "on-error-container": "#ffdad6",
+            "on-tertiary-container": "#5c0008",
+            "primary-container": "#a078ff",
+            "on-secondary-container": "#00424e",
+            "surface-variant": "#353439",
+            "error": "#ffb4ab",
+            "surface-container-low": "#1b1b1f",
+            "secondary-fixed-dim": "#4cd7f6",
+            "on-primary": "#3c0091",
+            "inverse-surface": "#e4e1e7"
+          },
+          borderRadius: {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          spacing: {
+            "margin-mobile": "1rem",
+            "gutter": "1.25rem",
+            "space-lg": "1.5rem",
+            "space-xl": "2.5rem",
+            "margin": "2rem",
+            "space-md": "1rem",
+            "gutter-mobile": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem"
+          },
+          fontFamily: {
+            "label-tag": ["Space Mono", "monospace"],
+            "headline-sm": ["Space Grotesk", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "label-telemetry": ["Space Mono", "monospace"],
+            "body-sm": ["Space Grotesk", "sans-serif"],
+            "body-md": ["Space Grotesk", "sans-serif"],
+            "headline-lg-mobile": ["Space Grotesk", "sans-serif"],
+            "display-hero": ["Space Grotesk", "sans-serif"],
+            "label-code": ["Space Mono", "monospace"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "body-lg": ["Space Grotesk", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    body {
+      background-color: #131317;
+      color: #e4e1e7;
+      font-family: 'Space Grotesk', sans-serif;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+    ::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="bg-surface font-body-md text-on-surface antialiased flex flex-col min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const locationsData = [
+      {
+        id: 'blackwood-sanatorium',
+        title: 'Blackwood Sanatorium',
+        subtitle: 'Pennhurst West Wing • Sub-Basement Crypt',
+        description: 'Repeated infrasound standing waves captured at 18.9 Hz coinciding with unexplained EMF spikes adjacent to the dormant hydrotherapy baths.',
+        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDyt3Z71ESvjdz8fMoDsjG4l3YeavxukzfTvzIoTqm6L0B--RSY99DErJnkNH53LgNGLWbvEeCr5u2D3QDstenS5upnrLBOkKuUruSWtKy2jcjZwxtvybj8-n_qfH1Mc2cM4D0YdgfYbtAd2v6gCzLu44zHpRyTygTnJiV8H-Gjc5IAxcTFP_KIEr6mnVigQbuqG8pHJ5hacI8nIC_knsOV6lo_AQH9qWwFAAx3Ahk',
+        distance: '12.4 MI DISTANT',
+        tags: [{ label: 'CAT IV AUDIO', color: 'text-tertiary' }, { label: 'UNVERIFIED', color: 'text-outline' }],
+        statusLabel: 'EVP THRESHOLD HIGH',
+        threatLevel: 'Class IV Residual Alert',
+        coordinates: 'LAT 40.1328° N, LON 75.5684° W',
+        established: '1908 (Decommissioned 1987)',
+        anomalies: [
+          'Continuous standing infrasound wave at 18.9 Hz',
+          'EMF micro-bursts reaching 8.7 mG with zero circuit grid power',
+          'Disembodied footsteps recorded in subterranean tunnel 4B'
+        ],
+        containmentProtocol: 'Class-4 isolation barrier active. Field teams must maintain dual-operator buddy system.'
+      },
+      {
+        id: 'whispering-pines',
+        title: 'Whispering Pines Asylum',
+        subtitle: "Children's Ward • Isolated Tower 3",
+        description: 'Localized cold-spot thermal drop logged at -14°F within insulated interior corridors without ambient draft or exterior structural breach.',
+        image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC5W-ifP9AdO9YCEKC0PypqcGW15HgSpEKjsmJ1x-g3V9qS1Uk8aU__QX4rd7VnBz3o7txHD-RMSZpK6l3pCMs17x-MluyejeYOlrviwfnXAJ5Sq-1JrfFPAQgzCOuO2fX3HJN1XQq_2hPAIIrRNbzkgOIhFMXz_0rDasjWhCXgJGnmVOJBFAqg7chGORgBThR3zAwQfNa1M0xbYcCsQr6TKxiWAt1qNuR4jgPr-5k',
+        distance: '31.8 MI DISTANT',
+        tags: [{ label: 'THERMAL DROP', color: 'text-primary' }, { label: 'CRITICAL AUDIT', color: 'text-tertiary' }],
+        statusLabel: 'VERIFICATION PENDING',
+        threatLevel: 'Class III Poltergeist',
+        coordinates: 'LAT 42.8864° N, LON 78.8784° W',
+        established: '1924 (Condemned 1976)',
+        anomalies: [
+          'Thermal sink drop to -14°F within 30 seconds of entry',
+          'Electronic battery depletion rate increased 400%'
+        ],
+        containmentProtocol: 'Cryogenic insulating suits recommended. Station FLIR monitors at both stairwells.'
+      }
+    ];
+
+    function App() {
+      const [currentRoute, setCurrentRoute] = useState('home');
+      const [selectedLocationId, setSelectedLocationId] = useState(null);
+      const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+      const [telemetry, setTelemetry] = useState({
+        emf: 4.8,
+        thermal: 58.2,
+        frequency: 105.4,
+        anomalyIndex: 'LVL 3-MOD',
+        fieldTeams: 14,
+        enRouteTeams: 4,
+        solarKp: 'Kp 4.2',
+        connected: false,
+        dbStatus: 'In-Memory Store'
+      });
+      const [incidents, setIncidents] = useState([
+        { id: 'inc-01', time: '03:14:22 EST', location: 'Blackwood Sanatorium', type: 'EMF Surge & Infrasound', level: 'LVL-4', status: 'Auditing' },
+        { id: 'inc-02', time: '02:48:10 EST', location: 'Whispering Pines Asylum', type: 'Sub-Zero Cold Spot (-14°F)', level: 'LVL-3', status: 'Active' },
+      ]);
+
+      // Telemetry Oscillator & Backend Connect
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setTelemetry(prev => ({
+            ...prev,
+            emf: parseFloat((4.4 + Math.random() * 0.9).toFixed(1)),
+            thermal: parseFloat((57.8 + Math.random() * 0.7).toFixed(1)),
+            frequency: parseFloat((105.1 + Math.random() * 0.6).toFixed(1)),
+          }));
+        }, 2800);
+
+        // Attempt connecting to backend API
+        fetch('http://localhost:5000/api/health')
+          .then(res => res.json())
+          .then((data) => setTelemetry(prev => ({
+            ...prev,
+            connected: true,
+            dbStatus: data.database?.provider || 'Node Synced'
+          })))
+          .catch(() => {});
+
+        return () => clearInterval(interval);
+      }, []);
+
+      const navigateTo = (route, locId = null) => {
+        setCurrentRoute(route);
+        if (locId) setSelectedLocationId(locId);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+
+      return (
+        <div className="flex flex-col min-h-screen relative">
+          {/* Header */}
+          <header className="fixed top-0 inset-x-0 z-50 bg-surface/85 backdrop-blur-xl pt-safe shadow-[0_4px_24px_rgba(0,0,0,0.6)] border-b border-outline-variant/30">
+            <div className="max-w-4xl mx-auto h-20 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsDrawerOpen(true)}
+                  className="w-11 h-11 flex items-center justify-center text-secondary hover:text-primary transition-colors rounded-lg hover:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined text-[26px]">terminal</span>
+                </button>
+                <img
+                  alt="BTU Emblem"
+                  className="h-8 w-auto object-contain"
+                  src="https://lh3.googleusercontent.com/aida/AEtjO1VxbnJV6xNmuPxNprShT6RGKuox634Xa-5m2O7gX7o0N4aVFkF2WLThcDZFBzRv76l9vRB3_Crno9UisjTJmj9Z9OwnxPCCbuH-REmiAG7cRwi_p0mInmTPs0wNg3ANqd3CHN3c3FfG2SWhdytDCWZIwpUi-G1bjHS72zkGxVqJPYIlFQ0zl1esufNti-Xhqc7Ix2WbyEiA2LbycFo0A-3WrkHmQAQeUQzpzD7JEuEY"
+                />
+                <div className="flex flex-col">
+                  <span className="font-headline-sm uppercase text-on-surface font-bold leading-none">BTU</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-tertiary-container animate-pulse shadow-[0_0_8px_rgba(255,84,81,0.8)]"></span>
+                    <span className="font-mono text-[10px] uppercase text-tertiary tracking-widest">LIVE ENCRYPTED</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex flex-col items-end font-mono">
+                  <span className="text-[11px] text-secondary">FREQ 142.8 MHZ</span>
+                  <span className="text-[10px] text-on-surface-variant uppercase">
+                    {telemetry.connected ? (telemetry.dbStatus.includes('MongoDB') ? '🍃 MONGODB ATLAS' : 'NODE SYNCED') : 'LOCAL SEC-4'}
+                  </span>
+                </div>
+                <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-secondary to-primary">
+                  <img
+                    alt="Profile"
+                    className="w-8 h-8 rounded-full object-cover"
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo"
+                  />
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Directives Drawer */}
+          {isDrawerOpen && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md pt-20">
+              <div className="fixed inset-0" onClick={() => setIsDrawerOpen(false)}></div>
+              <div className="relative max-w-sm ml-auto mr-0 bg-surface-container-high h-full p-6 flex flex-col justify-between border-l border-outline-variant/40 shadow-2xl">
+                <div>
+                  <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
+                    <span className="font-mono text-xs uppercase text-secondary tracking-widest font-bold">DIRECTIVES & ARCHIVE</span>
+                    <button onClick={() => setIsDrawerOpen(false)} className="text-on-surface-variant hover:text-on-surface">
+                      <span className="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <nav className="flex flex-col gap-2 mt-4">
+                    <button onClick={() => { navigateTo('about'); setIsDrawerOpen(false); }} className="h-12 px-4 rounded-lg bg-surface-container/60 hover:bg-surface-container flex items-center gap-3 text-left">
+                      <span className="material-symbols-outlined text-secondary">info</span>
+                      <span>About BTU Division</span>
+                    </button>
+                    <button onClick={() => { navigateTo('safety'); setIsDrawerOpen(false); }} className="h-12 px-4 rounded-lg bg-surface-container/60 hover:bg-surface-container flex items-center gap-3 text-left">
+                      <span className="material-symbols-outlined text-tertiary">shield_lock</span>
+                      <span>Class IV Containment Safety</span>
+                    </button>
+                    <button onClick={() => { navigateTo('contact'); setIsDrawerOpen(false); }} className="h-12 px-4 rounded-lg bg-surface-container/60 hover:bg-surface-container flex items-center gap-3 text-left">
+                      <span className="material-symbols-outlined text-primary">alternate_email</span>
+                      <span>Encrypted Dispatch Uplink</span>
+                    </button>
+                  </nav>
+                </div>
+                <div className="p-3 bg-surface-container-lowest rounded-lg border border-outline-variant/20 font-mono text-[10px] text-outline">
+                  <div>BTU PROTOCOL VER 4.8.2</div>
+                  <div className="text-secondary">STATION REF: LAT 34.0522° LON -118.2437°</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Main Content Router */}
+          <main className="flex-1 max-w-4xl w-full mx-auto px-4 pt-24 pb-28 space-y-4">
+            {/* HOME VIEW */}
+            {currentRoute === 'home' && (
+              <div className="space-y-4">
+                {/* Notice Banner */}
+                <div className="rounded-xl bg-surface-container-low p-4 border border-outline-variant/30 flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-error-container text-on-error-container flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-[16px] animate-pulse">warning</span>
+                  </div>
+                  <p className="font-body-sm text-on-surface-variant text-xs leading-relaxed">
+                    <strong className="text-on-surface">LEGAL & SAFETY NOTICE:</strong> Unauthorized entry onto condemned, quarantined, or private structures is strictly illegal. Empirical telemetry logs must comply with regional boundary laws.
+                  </p>
+                </div>
+
+                {/* Hero */}
+                <div className="relative rounded-xl overflow-hidden bg-cover bg-center min-h-[380px] flex flex-col justify-end p-6 border border-outline-variant/30" style={{ backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuC1WEYWJOccoXouzDsnLIBwf-VS7npZoVvkavb7YtDvuGdlwjjucy4H1Yk4UJ_FBu5VshVACUr-m5lo1tYUrkkDW-Wo3BrYTCPpEarKrkcOq9tuKHDmw-0nC0kkDdk5c9d3ZpHsbzVBIEDbG2cYvv82dO3xTxqVu2_yxcbfmBBqnwLGEXZl_Q0UQsPT_jwpfX-ARh16h5tV8wLOZ_m5nJ6h-By7m2AWTK1KJRRfKHY')" }}>
+                  <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/80 to-transparent"></div>
+                  <div className="relative z-10 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded-full bg-surface-container-lowest/90 border border-secondary/30 font-mono text-[10px] text-secondary">
+                        MISSION TELEMETRY READY
+                      </span>
+                      <span className="font-mono text-[10px] text-outline">STN-774</span>
+                    </div>
+                    <h1 className="text-3xl font-bold uppercase tracking-tight">
+                      Explore the Unknown.<br />
+                      <span className="text-primary-fixed-dim">Investigate the Unexplained.</span>
+                    </h1>
+                    <p className="text-xs text-on-surface-variant max-w-lg">
+                      A scientific & critical approach to anomalous phenomena, environmental radiation logging, and empirical field research.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                      <button onClick={() => navigateTo('dashboard')} className="flex-1 py-3 px-4 rounded-lg bg-gradient-to-r from-tertiary-container to-inverse-primary text-white font-bold uppercase tracking-wider text-xs shadow-lg">
+                        Start Investigation
+                      </button>
+                      <button onClick={() => navigateTo('locations')} className="flex-1 py-3 px-4 rounded-lg bg-surface-container-high/80 text-secondary border border-secondary/40 font-bold uppercase tracking-wider text-xs">
+                        Explore Locations
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Telemetry Bar */}
+                <div className="rounded-xl bg-surface-container-low p-4 border border-outline-variant/30">
+                  <div className="flex justify-between items-center pb-2 mb-2 border-b border-outline-variant/20 font-mono text-xs text-secondary">
+                    <span>LIVE ATMOSPHERIC TELEMETRY</span>
+                    <span className="text-tertiary flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-tertiary rounded-full animate-pulse"></span>
+                      FEED SYNCED
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 rounded bg-surface-container">
+                      <span className="font-mono text-[10px] text-outline block">ANOMALY INDEX</span>
+                      <span className="font-mono font-bold text-tertiary text-sm">{telemetry.anomalyIndex}</span>
+                    </div>
+                    <div className="p-2 rounded bg-surface-container">
+                      <span className="font-mono text-[10px] text-outline block">FIELD TEAMS</span>
+                      <span className="font-mono font-bold text-primary text-sm">{telemetry.fieldTeams} UNITS</span>
+                    </div>
+                    <div className="p-2 rounded bg-surface-container">
+                      <span className="font-mono text-[10px] text-outline block">SOLAR FLARE</span>
+                      <span className="font-mono font-bold text-secondary text-sm">{telemetry.solarKp}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sensor Strip */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div onClick={() => navigateTo('tools')} className="p-3 rounded-xl bg-surface-container border border-outline-variant/20 hover:border-primary/50 cursor-pointer">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="material-symbols-outlined text-primary text-[18px]">electric_bolt</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+                    </div>
+                    <span className="font-mono text-[10px] text-outline block">EMF FIELD</span>
+                    <span className="font-mono text-lg font-bold text-on-surface">{telemetry.emf}</span>
+                    <span className="font-mono text-[9px] text-primary-fixed-dim block">mG • AMBIENT</span>
+                  </div>
+
+                  <div onClick={() => navigateTo('tools')} className="p-3 rounded-xl bg-surface-container border border-outline-variant/20 hover:border-secondary/50 cursor-pointer">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="material-symbols-outlined text-secondary text-[18px]">thermostat</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    </div>
+                    <span className="font-mono text-[10px] text-outline block">THERMAL</span>
+                    <span className="font-mono text-lg font-bold text-on-surface">{telemetry.thermal}°</span>
+                    <span className="font-mono text-[9px] text-secondary block">FAHRENHEIT</span>
+                  </div>
+
+                  <div onClick={() => navigateTo('tools')} className="p-3 rounded-xl bg-surface-container border border-outline-variant/20 hover:border-tertiary/50 cursor-pointer">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="material-symbols-outlined text-tertiary text-[18px]">tune</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+                    </div>
+                    <span className="font-mono text-[10px] text-outline block">SWEEP SW</span>
+                    <span className="font-mono text-lg font-bold text-tertiary-fixed-dim">{telemetry.frequency}</span>
+                    <span className="font-mono text-[9px] text-tertiary block">MHz • REVERSE</span>
+                  </div>
+                </div>
+
+                {/* Locations preview */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <h2 className="font-bold uppercase text-lg">Target Containments</h2>
+                    <button onClick={() => navigateTo('locations')} className="font-mono text-xs text-secondary hover:underline">
+                      VIEW ALL (2) →
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {locationsData.map(loc => (
+                      <div key={loc.id} className="rounded-xl bg-surface-container overflow-hidden border border-outline-variant/30">
+                        <img src={loc.image} alt={loc.title} className="w-full h-36 object-cover" />
+                        <div className="p-4 space-y-2">
+                          <h3 className="font-bold text-base">{loc.title}</h3>
+                          <p className="text-xs text-outline line-clamp-2">{loc.description}</p>
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="font-mono text-[10px] text-tertiary">{loc.statusLabel}</span>
+                            <button onClick={() => navigateTo('detail', loc.id)} className="px-3 py-1 bg-secondary/15 text-secondary border border-secondary/30 rounded text-xs font-mono">
+                              View Dossier
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* LOCATIONS DIRECTORY VIEW */}
+            {currentRoute === 'locations' && (
+              <div className="space-y-4">
+                <h1 className="text-2xl font-bold uppercase">Containment Directory</h1>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {locationsData.map(loc => (
+                    <div key={loc.id} className="rounded-xl bg-surface-container overflow-hidden border border-outline-variant/30">
+                      <img src={loc.image} alt={loc.title} className="w-full h-44 object-cover" />
+                      <div className="p-4 space-y-2">
+                        <span className="font-mono text-[10px] text-secondary">{loc.distance}</span>
+                        <h2 className="font-bold text-lg">{loc.title}</h2>
+                        <p className="text-xs text-on-surface-variant">{loc.subtitle}</p>
+                        <p className="text-xs text-outline">{loc.description}</p>
+                        <button onClick={() => navigateTo('detail', loc.id)} className="w-full py-2 bg-secondary/20 text-secondary border border-secondary/40 rounded text-xs font-mono uppercase mt-2">
+                          Access Dossier & Blueprint
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* LOCATION DETAIL DOSSIER VIEW */}
+            {currentRoute === 'detail' && (
+              <div className="space-y-4">
+                <button onClick={() => navigateTo('locations')} className="text-secondary font-mono text-xs flex items-center gap-1">
+                  ← Back to Directory
+                </button>
+                {(() => {
+                  const loc = locationsData.find(l => l.id === selectedLocationId) || locationsData[0];
+                  return (
+                    <div className="rounded-xl bg-surface-container overflow-hidden border border-outline-variant/30 p-6 space-y-4">
+                      <img src={loc.image} alt={loc.title} className="w-full h-64 object-cover rounded-lg" />
+                      <div>
+                        <span className="px-2 py-0.5 rounded bg-tertiary-container text-white font-mono text-[10px] font-bold">
+                          {loc.threatLevel}
+                        </span>
+                        <h1 className="text-2xl font-bold uppercase mt-2">{loc.title}</h1>
+                        <p className="text-xs text-secondary font-mono">{loc.coordinates}</p>
+                      </div>
+                      <p className="text-sm text-on-surface-variant leading-relaxed">{loc.description}</p>
+                      <div className="p-4 bg-surface-container-low rounded-lg border border-primary/30 space-y-2">
+                        <span className="font-mono text-xs text-primary font-bold uppercase">MANDATORY PROTOCOL</span>
+                        <p className="text-xs text-outline">{loc.containmentProtocol}</p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* TOOLS / SENSORS VIEW */}
+            {currentRoute === 'tools' && (
+              <div className="space-y-4">
+                <h1 className="text-2xl font-bold uppercase">Hardware Sensors Suite</h1>
+                <div className="p-6 rounded-xl bg-surface-container border border-outline-variant/30 text-center space-y-4">
+                  <span className="font-mono text-xs text-outline uppercase">NATURAL EMF MAGNETIC FLUX</span>
+                  <div className="text-6xl font-mono font-bold text-primary">{telemetry.emf} mG</div>
+                  <div className="w-full bg-surface-container-high h-3 rounded-full overflow-hidden">
+                    <div className="bg-primary h-full transition-all duration-300" style={{ width: `${Math.min(100, telemetry.emf * 10)}%` }}></div>
+                  </div>
+                  <div className="flex justify-between font-mono text-xs text-outline pt-2">
+                    <span>AMBIENT: {telemetry.thermal}°F</span>
+                    <span>SWEEP: {telemetry.frequency} MHz</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* OPS DASHBOARD VIEW */}
+            {currentRoute === 'dashboard' && (
+              <div className="space-y-4">
+                <h1 className="text-2xl font-bold uppercase">Operations Command</h1>
+                <div className="rounded-xl bg-surface-container p-4 border border-outline-variant/30 space-y-3">
+                  <span className="font-mono text-xs text-secondary font-bold">ACTIVE INCIDENT TICKER</span>
+                  {incidents.map(inc => (
+                    <div key={inc.id} className="p-3 rounded bg-surface-container-low border border-outline-variant/20 flex justify-between items-center text-xs">
+                      <div>
+                        <span className="font-bold text-primary mr-2 font-mono">{inc.id}</span>
+                        <span className="font-bold text-on-surface">{inc.location}</span>
+                        <div className="text-outline text-[11px]">{inc.type}</div>
+                      </div>
+                      <span className="font-mono text-tertiary">{inc.level}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* EVIDENCE VAULT VIEW */}
+            {currentRoute === 'evidence' && (
+              <div className="space-y-4">
+                <h1 className="text-2xl font-bold uppercase">Evidence Vault Archive</h1>
+                <div className="p-4 rounded-xl bg-surface-container border border-outline-variant/30 space-y-3">
+                  <div className="flex justify-between items-center font-mono text-xs text-primary">
+                    <span>ARCHIVE #489 • REVIEWED</span>
+                    <span>CONFIDENCE 94.2%</span>
+                  </div>
+                  <h2 className="font-bold text-lg">Class-A EVP: St. Jude Quarantine Ward</h2>
+                  <p className="text-xs text-on-surface-variant">
+                    Phoneme cadence reveals distinct multi-syllabic phrase "Still here with you". Natural draft ruled out.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ABOUT VIEW */}
+            {currentRoute === 'about' && (
+              <div className="p-6 rounded-xl bg-surface-container border border-outline-variant/30 space-y-3">
+                <h1 className="text-2xl font-bold uppercase">About BTU Division</h1>
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  Beyond the Unknown (BTU) is an empirical scientific division chartered to investigate, categorize, and contain unexplained anomalous phenomena under ISO-17025 scientific standards.
+                </p>
+              </div>
+            )}
+
+            {/* SAFETY VIEW */}
+            {currentRoute === 'safety' && (
+              <div className="p-6 rounded-xl bg-surface-container border border-outline-variant/30 space-y-3">
+                <h1 className="text-2xl font-bold uppercase text-tertiary">Class IV Containment Safety</h1>
+                <p className="text-sm text-on-surface-variant">
+                  Mandatory operational buddy system required. Exposure to fields exceeding 10 mG mandates immediate retreat.
+                </p>
+              </div>
+            )}
+
+            {/* CONTACT VIEW */}
+            {currentRoute === 'contact' && (
+              <div className="p-6 rounded-xl bg-surface-container border border-outline-variant/30 space-y-3">
+                <h1 className="text-2xl font-bold uppercase text-primary">Encrypted Dispatch Uplink</h1>
+                <p className="text-sm text-on-surface-variant font-mono">
+                  Channel: 142.800 MHz • 256-Bit AES Active Relay
+                </p>
+              </div>
+            )}
+          </main>
+
+          {/* Bottom Navigation */}
+          <nav className="fixed bottom-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-2xl border-t border-outline-variant/30 pb-safe">
+            <div className="max-w-md mx-auto flex justify-between items-center h-20 px-4">
+              {[
+                { id: 'home', label: 'Home', icon: 'radar' },
+                { id: 'locations', label: 'Locs', icon: 'explore' },
+                { id: 'tools', label: 'Tools', icon: 'sensors' },
+                { id: 'dashboard', label: 'Ops', icon: 'emergency' },
+                { id: 'evidence', label: 'Vault', icon: 'inventory_2' }
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => navigateTo(item.id)}
+                  className={`flex flex-col items-center justify-center gap-1 w-14 h-14 ${
+                    currentRoute === item.id ? 'text-primary' : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                  <span className="font-mono text-[10px] uppercase">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
+

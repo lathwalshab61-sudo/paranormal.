@@ -1,0 +1,13 @@
+{
+  "name": "beyond-the-unknown-fullstack",
+  "version": "1.0.0",
+  "description": "Beyond the Unknown (BTU) Full Stack Paranormal Telemetry & Operations Console",
+  "scripts": {
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  }
+}
+
