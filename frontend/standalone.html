@@ -199,8 +199,15 @@
           }));
         }, 2800);
 
-        // Attempt connecting to backend API
-        fetch('http://localhost:5000/api/health')
+        // Attempt connecting to backend API (Dynamic host for local & cloud deployments like Render)
+        const apiOrigin = (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http'))
+          ? (window.location.hostname === 'localhost' && window.location.port !== '5000' && window.location.port !== ''
+              ? 'http://localhost:5000'
+              : window.location.origin)
+          : 'http://localhost:5000';
+
+        fetch(`${apiOrigin}/api/health`)
+          .catch(() => fetch(`${apiOrigin}/health`))
           .then(res => res.json())
           .then((data) => setTelemetry(prev => ({
             ...prev,

@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Beyond the Unknown (BTU) Full Stack Paranormal Telemetry & Operations Console",
   "scripts": {
+    "start": "node backend/server.js",
+    "build": "cd backend && npm install",
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",

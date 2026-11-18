@@ -80,13 +80,14 @@ if (express && cors) {
 
   // Static files
   app.use(express.static(FRONTEND_DIR));
+  app.use(express.static(path.join(__dirname, 'public')));
 
   app.use((req, res, next) => {
     console.log(`[BTU-NET ${new Date().toISOString()}] ${req.method} ${req.url}`);
     next();
   });
 
-  app.get('/api/health', (req, res) => {
+  const sendHealthCheck = (req, res) => {
     res.json({
       status: 'ONLINE',
       engine: 'Express.js',
@@ -97,7 +98,11 @@ if (express && cors) {
       serverTime: new Date().toISOString(),
       telemetryActive: true,
     });
-  });
+  };
+
+  // Support both /health and /api/health
+  app.get('/health', sendHealthCheck);
+  app.get('/api/health', sendHealthCheck);
 
   app.get('/api/telemetry', (req, res) => res.json({ status: 'ok', data: currentTelemetry }));
 
@@ -212,13 +217,27 @@ if (express && cors) {
     res.json({ status: 'ok', ackId, source: 'In-Memory', data: record });
   });
 
-  app.get('/', (req, res) => {
-    const standaloneFile = path.join(FRONTEND_DIR, 'standalone.html');
-    if (fs.existsSync(standaloneFile)) {
-      res.sendFile(standaloneFile);
-    } else {
-      res.send('BTU Telemetry Backend Online.');
+  const serveFrontendApp = (req, res) => {
+    const candidatePaths = [
+      path.join(FRONTEND_DIR, 'standalone.html'),
+      path.join(__dirname, 'public/index.html'),
+      path.join(__dirname, 'standalone.html'),
+      path.join(__dirname, '../code.html'),
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) return res.sendFile(p);
     }
+    res.send('BTU Telemetry Backend Online.');
+  };
+
+  app.get('/', serveFrontendApp);
+  app.get('/index.html', serveFrontendApp);
+  app.get('/app', serveFrontendApp);
+
+  // Catch-all route for SPA navigation (excluding /api routes)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') return next();
+    serveFrontendApp(req, res);
   });
 
   app.listen(PORT, () => {
@@ -269,17 +288,24 @@ if (express && cors) {
     };
 
     // Serve Frontend Standalone React App at root
-    if (pathname === '/' || pathname === '/index.html' || pathname === '/app') {
-      const standaloneFile = path.join(FRONTEND_DIR, 'standalone.html');
-      if (fs.existsSync(standaloneFile)) {
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        fs.createReadStream(standaloneFile).pipe(res);
-        return;
+    if (pathname === '/' || pathname === '/index.html' || pathname === '/app' || (!pathname.startsWith('/api') && pathname !== '/health')) {
+      const candidatePaths = [
+        path.join(FRONTEND_DIR, 'standalone.html'),
+        path.join(__dirname, 'public/index.html'),
+        path.join(__dirname, 'standalone.html'),
+        path.join(__dirname, '../code.html'),
+      ];
+      for (const p of candidatePaths) {
+        if (fs.existsSync(p)) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          fs.createReadStream(p).pipe(res);
+          return;
+        }
       }
     }
 
     // Routing
-    if (pathname === '/api/health') {
+    if (pathname === '/health' || pathname === '/api/health') {
       sendJson(200, {
         status: 'ONLINE',
         engine: 'Native Node.js (Zero-Dependency Engine)',

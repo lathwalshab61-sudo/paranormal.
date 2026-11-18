@@ -71,7 +71,10 @@ if (mongoose) {
   DispatchModel = mongoose.models.Dispatch || mongoose.model('Dispatch', dispatchSchema);
 }
 
+let lastUri = '';
+
 export async function connectDB(uri) {
+  lastUri = uri;
   if (!mongoose) {
     console.log('[Database] Running with in-memory database (Mongoose not installed).');
     return false;
@@ -84,9 +87,33 @@ export async function connectDB(uri) {
     return false;
   }
 
+  // Normalize password encoding (e.g. if password has unencoded '@' like Aryan@2007)
+  let safeUri = uri;
+  try {
+    const srvPrefix = uri.includes('mongodb+srv://') ? 'mongodb+srv://' : (uri.includes('mongodb://') ? 'mongodb://' : '');
+    if (srvPrefix) {
+      const rest = uri.slice(srvPrefix.length);
+      const lastAt = rest.lastIndexOf('@');
+      if (lastAt !== -1) {
+        const userinfo = rest.slice(0, lastAt);
+        const hostAndQuery = rest.slice(lastAt + 1);
+        const colonIdx = userinfo.indexOf(':');
+        if (colonIdx !== -1) {
+          const user = userinfo.slice(0, colonIdx);
+          const rawPass = userinfo.slice(colonIdx + 1);
+          const cleanPass = decodeURIComponent(rawPass);
+          const encodedPass = encodeURIComponent(cleanPass);
+          safeUri = `${srvPrefix}${user}:${encodedPass}@${hostAndQuery}`;
+        }
+      }
+    }
+  } catch (e) {
+    safeUri = uri;
+  }
+
   try {
     console.log('[Database] Connecting to MongoDB Atlas cluster...');
-    await mongoose.connect(uri, {
+    await mongoose.connect(safeUri, {
       serverSelectionTimeoutMS: 5000,
     });
     isConnected = true;
@@ -132,9 +159,19 @@ async function seedDatabaseIfEmpty() {
 }
 
 export function getDBStatus() {
+  let provider = 'In-Memory Store';
+  if (isConnected) {
+    provider = 'MongoDB Atlas (Cluster0 Connected)';
+  } else if (!mongoose) {
+    provider = 'In-Memory Store (Mongoose not installed locally)';
+  } else if (!lastUri || lastUri.includes('<db_password>')) {
+    provider = 'In-Memory Store (Awaiting Password in .env)';
+  } else {
+    provider = 'In-Memory Store (Connecting / Offline fallback)';
+  }
   return {
     connected: isConnected,
-    provider: isConnected ? 'MongoDB Atlas (Cluster0)' : 'In-Memory Store (Awaiting Password in .env)',
+    provider,
     mongooseAvailable: !!mongoose,
   };
 }

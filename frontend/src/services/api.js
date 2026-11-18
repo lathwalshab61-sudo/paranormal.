@@ -1,4 +1,8 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http'))
+  ? (window.location.hostname === 'localhost' && window.location.port !== '5000' && window.location.port !== ''
+      ? 'http://localhost:5000/api'
+      : `${window.location.origin}/api`)
+  : 'http://localhost:5000/api';
 
 export async function fetchWithFallback(endpoint, fallbackData) {
   try {

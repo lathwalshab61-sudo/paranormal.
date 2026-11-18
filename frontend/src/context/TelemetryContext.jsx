@@ -48,8 +48,15 @@ export function TelemetryProvider({ children }) {
 
   // Try Server-Sent Events or Poll Backend
   useEffect(() => {
+    const apiOrigin = (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http'))
+      ? (window.location.hostname === 'localhost' && window.location.port !== '5000' && window.location.port !== ''
+          ? 'http://localhost:5000'
+          : window.location.origin)
+      : 'http://localhost:5000';
+
     // Check Health & DB status
-    fetch('http://localhost:5000/api/health')
+    fetch(`${apiOrigin}/api/health`)
+      .catch(() => fetch(`${apiOrigin}/health`))
       .then((res) => res.json())
       .then((data) => {
         setTelemetry((prev) => ({
@@ -62,7 +69,7 @@ export function TelemetryProvider({ children }) {
 
     let sseSource = null;
     try {
-      sseSource = new EventSource('http://localhost:5000/api/telemetry/stream');
+      sseSource = new EventSource(`${apiOrigin}/api/telemetry/stream`);
       sseSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
