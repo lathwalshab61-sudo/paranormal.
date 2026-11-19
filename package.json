@@ -4,12 +4,19 @@
   "description": "Beyond the Unknown (BTU) Full Stack Paranormal Telemetry & Operations Console",
   "scripts": {
     "start": "node backend/server.js",
-    "build": "cd backend && npm install",
+    "build": "npm --prefix backend install",
+    "postinstall": "npm --prefix backend install",
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "install:all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.1",
+    "mongoose": "^8.8.3"
   }
 }
 
