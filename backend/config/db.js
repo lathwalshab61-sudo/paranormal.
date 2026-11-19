@@ -6,6 +6,7 @@ let LocationModel = null;
 let IncidentModel = null;
 let EvidenceModel = null;
 let DispatchModel = null;
+let UserModel = null;
 
 // Try dynamically importing mongoose
 try {
@@ -65,10 +66,23 @@ if (mongoose) {
     status: { type: String, default: 'ACKNOWLEDGED_BY_CENTRAL' },
   }, { timestamps: true });
 
+  const userSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    callSign: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true },
+    clearanceLevel: { type: String, default: 'SEC-LEVEL 2' },
+    role: { type: String, default: 'Field Operative' },
+    badgeNumber: { type: String },
+    stationRef: { type: String, default: 'LAT 34.0522° LON -118.2437°' },
+    avatar: { type: String, default: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo' }
+  }, { timestamps: true });
+
   LocationModel = mongoose.models.Location || mongoose.model('Location', locationSchema);
   IncidentModel = mongoose.models.Incident || mongoose.model('Incident', incidentSchema);
   EvidenceModel = mongoose.models.Evidence || mongoose.model('Evidence', evidenceSchema);
   DispatchModel = mongoose.models.Dispatch || mongoose.model('Dispatch', dispatchSchema);
+  UserModel = mongoose.models.User || mongoose.model('User', userSchema);
 }
 
 let lastUri = '';
@@ -176,5 +190,5 @@ export function getDBStatus() {
   };
 }
 
-export { LocationModel, IncidentModel, EvidenceModel, DispatchModel };
+export { LocationModel, IncidentModel, EvidenceModel, DispatchModel, UserModel };
 

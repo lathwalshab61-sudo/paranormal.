@@ -2,9 +2,10 @@ import http from 'http';
 import url from 'url';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { initialLocations, initialEvidence, initialIncidents } from './data/seedData.js';
-import { connectDB, getDBStatus, LocationModel, IncidentModel, EvidenceModel, DispatchModel } from './config/db.js';
+import { connectDB, getDBStatus, LocationModel, IncidentModel, EvidenceModel, DispatchModel, UserModel } from './config/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,24 @@ let inMemoryLocations = [...initialLocations];
 let inMemoryEvidence = [...initialEvidence];
 let inMemoryIncidents = [...initialIncidents];
 let inMemoryDispatch = [];
+
+export function hashPassword(password) {
+  return crypto.createHash('sha256').update(password + 'btu_secret_salt_2026').digest('hex');
+}
+
+let inMemoryUsers = [
+  {
+    id: 'user-001',
+    callSign: 'AGENT-774',
+    email: 'agent774@btu.gov',
+    passwordHash: hashPassword('Password123!'),
+    clearanceLevel: 'SEC-LEVEL 4',
+    role: 'Senior Containment Lead',
+    badgeNumber: 'BTU-8849-CL4',
+    stationRef: 'LAT 34.0522° LON -118.2437°',
+    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo',
+  }
+];
 
 // Continuous telemetry oscillator
 setInterval(() => {
@@ -215,6 +234,111 @@ if (express && cors) {
 
     inMemoryDispatch.unshift(record);
     res.json({ status: 'ok', ackId, source: 'In-Memory', data: record });
+  });
+
+  // Authentication - Sign Up / Register
+  app.post(['/api/auth/register', '/api/auth/signup'], async (req, res) => {
+    try {
+      const { callSign, email, password, clearanceLevel, badgeNumber, role } = req.body;
+      if (!email || !password || !callSign) {
+        return res.status(400).json({ error: 'Call-Sign, Email, and Password are required.' });
+      }
+
+      const dbStatus = getDBStatus();
+      const existingUser = dbStatus.connected && UserModel
+        ? await UserModel.findOne({ email: email.toLowerCase() })
+        : inMemoryUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+      if (existingUser) {
+        return res.status(409).json({ error: 'Operative credentials already registered for this email.' });
+      }
+
+      const newUser = {
+        id: `agent-${Date.now().toString().slice(-5)}`,
+        callSign: callSign.toUpperCase(),
+        email: email.toLowerCase(),
+        passwordHash: hashPassword(password),
+        clearanceLevel: clearanceLevel || 'SEC-LEVEL 2',
+        role: role || 'Field Operative',
+        badgeNumber: badgeNumber || `BTU-${Math.floor(1000 + Math.random() * 9000)}`,
+        stationRef: 'LAT 34.0522° LON -118.2437°',
+        avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo',
+      };
+
+      if (dbStatus.connected && UserModel) {
+        await UserModel.create(newUser);
+      } else {
+        inMemoryUsers.push(newUser);
+      }
+
+      const { passwordHash, ...userProfile } = newUser;
+      const token = `BTU-SESSION-${crypto.randomBytes(16).toString('hex')}`;
+
+      res.status(201).json({
+        status: 'ok',
+        message: 'BTU Field Clearance Registered Successfully',
+        user: userProfile,
+        token,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Authentication Registration Failed', message: err.message });
+    }
+  });
+
+  // Authentication - Sign In / Login
+  app.post(['/api/auth/login', '/api/auth/signin'], async (req, res) => {
+    try {
+      const { identifier, email, password } = req.body;
+      const loginId = (identifier || email || '').trim().toLowerCase();
+      if (!loginId || !password) {
+        return res.status(400).json({ error: 'Operative ID / Email and Password are required.' });
+      }
+
+      const dbStatus = getDBStatus();
+      const user = dbStatus.connected && UserModel
+        ? await UserModel.findOne({
+            $or: [{ email: loginId }, { callSign: loginId.toUpperCase() }],
+          })
+        : inMemoryUsers.find(
+            (u) => u.email.toLowerCase() === loginId || u.callSign.toLowerCase() === loginId
+          );
+
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid Operative Credentials or Unrecognized Call-Sign.' });
+      }
+
+      const inputHash = hashPassword(password);
+      if (user.passwordHash !== inputHash) {
+        return res.status(401).json({ error: 'Access Denied: Invalid Security Passkey.' });
+      }
+
+      const userObj = user.toObject ? user.toObject() : user;
+      const { passwordHash, ...userProfile } = userObj;
+      const token = `BTU-SESSION-${crypto.randomBytes(16).toString('hex')}`;
+
+      res.json({
+        status: 'ok',
+        message: 'Clearance Granted: Welcome Operative',
+        user: userProfile,
+        token,
+      });
+    } catch (err) {
+      res.status(500).json({ error: 'Authentication Failed', message: err.message });
+    }
+  });
+
+  // Authentication - Current User / Session Check
+  app.get('/api/auth/me', (req, res) => {
+    res.json({
+      status: 'ok',
+      demoOperative: {
+        callSign: 'AGENT-774',
+        email: 'agent774@btu.gov',
+        clearanceLevel: 'SEC-LEVEL 4',
+        role: 'Senior Containment Lead',
+        badgeNumber: 'BTU-8849-CL4',
+      },
+    });
   });
 
   const serveFrontendApp = (req, res) => {
@@ -412,6 +536,104 @@ if (express && cors) {
         } catch (e) {}
         inMemoryDispatch.unshift(record);
         sendJson(200, { status: 'ok', ackId, source: 'In-Memory', data: record });
+      });
+    } else if ((pathname === '/api/auth/register' || pathname === '/api/auth/signup') && method === 'POST') {
+      parseBody(async (body) => {
+        try {
+          const { callSign, email, password, clearanceLevel, badgeNumber, role } = body;
+          if (!email || !password || !callSign) {
+            return sendJson(400, { error: 'Call-Sign, Email, and Password are required.' });
+          }
+
+          const dbStatus = getDBStatus();
+          const existingUser = dbStatus.connected && UserModel
+            ? await UserModel.findOne({ email: email.toLowerCase() })
+            : inMemoryUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+          if (existingUser) {
+            return sendJson(409, { error: 'Operative credentials already registered for this email.' });
+          }
+
+          const newUser = {
+            id: `agent-${Date.now().toString().slice(-5)}`,
+            callSign: callSign.toUpperCase(),
+            email: email.toLowerCase(),
+            passwordHash: hashPassword(password),
+            clearanceLevel: clearanceLevel || 'SEC-LEVEL 2',
+            role: role || 'Field Operative',
+            badgeNumber: badgeNumber || `BTU-${Math.floor(1000 + Math.random() * 9000)}`,
+            stationRef: 'LAT 34.0522° LON -118.2437°',
+            avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo',
+          };
+
+          if (dbStatus.connected && UserModel) {
+            await UserModel.create(newUser);
+          } else {
+            inMemoryUsers.push(newUser);
+          }
+
+          const { passwordHash, ...userProfile } = newUser;
+          const token = `BTU-SESSION-${crypto.randomBytes(16).toString('hex')}`;
+          sendJson(201, {
+            status: 'ok',
+            message: 'BTU Field Clearance Registered Successfully',
+            user: userProfile,
+            token,
+          });
+        } catch (err) {
+          sendJson(500, { error: 'Authentication Registration Failed', message: err.message });
+        }
+      });
+    } else if ((pathname === '/api/auth/login' || pathname === '/api/auth/signin') && method === 'POST') {
+      parseBody(async (body) => {
+        try {
+          const { identifier, email, password } = body;
+          const loginId = (identifier || email || '').trim().toLowerCase();
+          if (!loginId || !password) {
+            return sendJson(400, { error: 'Operative ID / Email and Password are required.' });
+          }
+
+          const dbStatus = getDBStatus();
+          const user = dbStatus.connected && UserModel
+            ? await UserModel.findOne({
+                $or: [{ email: loginId }, { callSign: loginId.toUpperCase() }],
+              })
+            : inMemoryUsers.find(
+                (u) => u.email.toLowerCase() === loginId || u.callSign.toLowerCase() === loginId
+              );
+
+          if (!user) {
+            return sendJson(401, { error: 'Invalid Operative Credentials or Unrecognized Call-Sign.' });
+          }
+
+          const inputHash = hashPassword(password);
+          if (user.passwordHash !== inputHash) {
+            return sendJson(401, { error: 'Access Denied: Invalid Security Passkey.' });
+          }
+
+          const userObj = user.toObject ? user.toObject() : user;
+          const { passwordHash, ...userProfile } = userObj;
+          const token = `BTU-SESSION-${crypto.randomBytes(16).toString('hex')}`;
+          sendJson(200, {
+            status: 'ok',
+            message: 'Clearance Granted: Welcome Operative',
+            user: userProfile,
+            token,
+          });
+        } catch (err) {
+          sendJson(500, { error: 'Authentication Failed', message: err.message });
+        }
+      });
+    } else if (pathname === '/api/auth/me') {
+      sendJson(200, {
+        status: 'ok',
+        demoOperative: {
+          callSign: 'AGENT-774',
+          email: 'agent774@btu.gov',
+          clearanceLevel: 'SEC-LEVEL 4',
+          role: 'Senior Containment Lead',
+          badgeNumber: 'BTU-8849-CL4',
+        },
       });
     } else {
       sendJson(404, { error: 'Endpoint not found', pathname });

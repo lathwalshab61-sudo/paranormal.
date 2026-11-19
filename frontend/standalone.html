@@ -183,10 +183,160 @@
         connected: false,
         dbStatus: 'In-Memory Store'
       });
+      const [currentUser, setCurrentUser] = useState(() => {
+        try {
+          const saved = localStorage.getItem('btu_user');
+          return saved ? JSON.parse(saved) : null;
+        } catch {
+          return null;
+        }
+      });
+      const [authMode, setAuthMode] = useState('signin');
+      const [authError, setAuthError] = useState('');
+      const [authSuccess, setAuthSuccess] = useState('');
+      const [showPass, setShowPass] = useState(false);
+      const [authForm, setAuthForm] = useState({
+        identifier: '',
+        password: '',
+        callSign: '',
+        email: '',
+        signupPassword: '',
+        confirmPassword: '',
+        clearanceLevel: 'SEC-LEVEL 2',
+        badgeNumber: '',
+        acceptedProtocols: false
+      });
       const [incidents, setIncidents] = useState([
         { id: 'inc-01', time: '03:14:22 EST', location: 'Blackwood Sanatorium', type: 'EMF Surge & Infrasound', level: 'LVL-4', status: 'Auditing' },
         { id: 'inc-02', time: '02:48:10 EST', location: 'Whispering Pines Asylum', type: 'Sub-Zero Cold Spot (-14°F)', level: 'LVL-3', status: 'Active' },
       ]);
+
+      const handleLoginSubmit = async (e) => {
+        e && e.preventDefault();
+        setAuthError('');
+        setAuthSuccess('');
+        const id = authForm.identifier.trim();
+        const pwd = authForm.password;
+        if (!id || !pwd) {
+          setAuthError('Please enter your Call-Sign/Email and Security Passkey.');
+          return;
+        }
+
+        const apiOrigin = (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http'))
+          ? (window.location.hostname === 'localhost' && window.location.port !== '5000' && window.location.port !== ''
+              ? 'http://localhost:5000'
+              : window.location.origin)
+          : 'http://localhost:5000';
+
+        try {
+          const res = await fetch(`${apiOrigin}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: id, password: pwd })
+          });
+          const data = await res.json();
+          if (res.ok && data.user) {
+            setCurrentUser(data.user);
+            localStorage.setItem('btu_user', JSON.stringify(data.user));
+            setAuthSuccess(`Access Granted: Welcome, ${data.user.callSign}`);
+            setTimeout(() => navigateTo('home'), 1200);
+          } else {
+            setAuthError(data.error || 'Access Denied: Invalid credentials.');
+          }
+        } catch (err) {
+          // Local fallback simulation
+          const mockUser = {
+            id: 'agent-local',
+            callSign: id.toUpperCase().includes('@') ? 'AGENT-BTU' : id.toUpperCase(),
+            email: id.includes('@') ? id : `${id.toLowerCase()}@btu.gov`,
+            clearanceLevel: 'SEC-LEVEL 4',
+            role: 'Field Operative',
+            avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo'
+          };
+          setCurrentUser(mockUser);
+          localStorage.setItem('btu_user', JSON.stringify(mockUser));
+          setAuthSuccess(`Clearance Granted: Welcome, ${mockUser.callSign}`);
+          setTimeout(() => navigateTo('home'), 1200);
+        }
+      };
+
+      const handleDemoLogin = () => {
+        setAuthForm(prev => ({ ...prev, identifier: 'agent774@btu.gov', password: 'Password123!' }));
+        const demoUser = {
+          id: 'user-001',
+          callSign: 'AGENT-774',
+          email: 'agent774@btu.gov',
+          clearanceLevel: 'SEC-LEVEL 4',
+          role: 'Senior Containment Lead',
+          badgeNumber: 'BTU-8849-CL4',
+          avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo'
+        };
+        setCurrentUser(demoUser);
+        localStorage.setItem('btu_user', JSON.stringify(demoUser));
+        setAuthSuccess('Demo Clearance Granted: Welcome, AGENT-774');
+        setTimeout(() => navigateTo('home'), 1000);
+      };
+
+      const handleRegisterSubmit = async (e) => {
+        e && e.preventDefault();
+        setAuthError('');
+        setAuthSuccess('');
+        const { callSign, email, signupPassword, confirmPassword, clearanceLevel, badgeNumber, acceptedProtocols } = authForm;
+        if (!callSign.trim()) { setAuthError('Call-Sign is required.'); return; }
+        if (!email.trim() || !email.includes('@')) { setAuthError('Valid email is required.'); return; }
+        if (signupPassword.length < 6) { setAuthError('Passkey must be at least 6 characters.'); return; }
+        if (signupPassword !== confirmPassword) { setAuthError('Passkeys do not match.'); return; }
+        if (!acceptedProtocols) { setAuthError('You must acknowledge Class IV Containment directives.'); return; }
+
+        const apiOrigin = (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http'))
+          ? (window.location.hostname === 'localhost' && window.location.port !== '5000' && window.location.port !== ''
+              ? 'http://localhost:5000'
+              : window.location.origin)
+          : 'http://localhost:5000';
+
+        try {
+          const res = await fetch(`${apiOrigin}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              callSign,
+              email,
+              password: signupPassword,
+              clearanceLevel,
+              badgeNumber: badgeNumber || `BTU-${Math.floor(1000 + Math.random() * 9000)}`
+            })
+          });
+          const data = await res.json();
+          if (res.ok && data.user) {
+            setCurrentUser(data.user);
+            localStorage.setItem('btu_user', JSON.stringify(data.user));
+            setAuthSuccess(`Clearance Registered: Welcome Operative ${data.user.callSign}!`);
+            setTimeout(() => navigateTo('home'), 1200);
+          } else {
+            setAuthError(data.error || 'Registration rejected.');
+          }
+        } catch (err) {
+          const newUser = {
+            id: `agent-${Date.now().toString().slice(-4)}`,
+            callSign: callSign.toUpperCase(),
+            email: email.toLowerCase(),
+            clearanceLevel,
+            role: 'Field Operative',
+            badgeNumber: badgeNumber || 'BTU-8890-OP',
+            avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo'
+          };
+          setCurrentUser(newUser);
+          localStorage.setItem('btu_user', JSON.stringify(newUser));
+          setAuthSuccess(`Clearance Registered: Welcome Operative ${newUser.callSign}!`);
+          setTimeout(() => navigateTo('home'), 1200);
+        }
+      };
+
+      const handleLogout = () => {
+        setCurrentUser(null);
+        localStorage.removeItem('btu_user');
+        navigateTo('home');
+      };
 
       // Telemetry Oscillator & Backend Connect
       useEffect(() => {
@@ -258,13 +408,41 @@
                     {telemetry.connected ? (telemetry.dbStatus.includes('MongoDB') ? '🍃 MONGODB ATLAS' : 'NODE SYNCED') : 'LOCAL SEC-4'}
                   </span>
                 </div>
-                <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-secondary to-primary">
-                  <img
-                    alt="Profile"
-                    className="w-8 h-8 rounded-full object-cover"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo"
-                  />
-                </div>
+                {currentUser ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigateTo('auth')}
+                      className="flex items-center gap-1.5 p-1 rounded-full bg-surface-container hover:bg-surface-container-high transition-colors border border-outline-variant/30"
+                    >
+                      <div className="relative p-0.5 rounded-full bg-gradient-to-tr from-secondary to-primary shadow-[0_0_12px_rgba(76,215,246,0.3)]">
+                        <img
+                          alt={currentUser.callSign}
+                          className="w-8 h-8 rounded-full object-cover"
+                          src={currentUser.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo"}
+                        />
+                      </div>
+                      <div className="hidden md:flex flex-col text-left pr-2 font-mono">
+                        <span className="text-xs font-bold text-on-surface leading-tight">{currentUser.callSign}</span>
+                        <span className="text-[10px] text-secondary">{currentUser.clearanceLevel || 'SEC-LEVEL 2'}</span>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      title="Sign Out"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container hover:bg-surface-container-high text-tertiary transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">logout</span>
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => navigateTo('auth')}
+                    className="py-1.5 px-3 rounded-lg bg-primary/20 hover:bg-primary/30 border border-primary/50 text-primary font-mono text-xs uppercase font-bold transition-all shadow-[0_0_12px_rgba(208,188,255,0.25)] flex items-center gap-1.5 active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">vpn_key</span>
+                    <span>Sign In</span>
+                  </button>
+                )}
               </div>
             </div>
           </header>
@@ -293,6 +471,10 @@
                     <button onClick={() => { navigateTo('contact'); setIsDrawerOpen(false); }} className="h-12 px-4 rounded-lg bg-surface-container/60 hover:bg-surface-container flex items-center gap-3 text-left">
                       <span className="material-symbols-outlined text-primary">alternate_email</span>
                       <span>Encrypted Dispatch Uplink</span>
+                    </button>
+                    <button onClick={() => { navigateTo('auth'); setIsDrawerOpen(false); }} className="h-12 px-4 rounded-lg bg-surface-container/60 hover:bg-surface-container flex items-center gap-3 text-left text-secondary">
+                      <span className="material-symbols-outlined text-secondary">vpn_key</span>
+                      <span>{currentUser ? `Operative Dossier (${currentUser.callSign})` : 'Clearance Sign In / Register'}</span>
                     </button>
                   </nav>
                 </div>
@@ -568,6 +750,248 @@
                 <p className="text-sm text-on-surface-variant font-mono">
                   Channel: 142.800 MHz • 256-Bit AES Active Relay
                 </p>
+              </div>
+            )}
+
+            {/* AUTH / SIGN IN / SIGN UP VIEW */}
+            {currentRoute === 'auth' && (
+              <div className="space-y-4 max-w-xl mx-auto">
+                <div className="text-center space-y-1">
+                  <span className="font-mono text-xs text-secondary tracking-widest uppercase">
+                    [ RESTRICTED CLEARANCE ENTRY ]
+                  </span>
+                  <h1 className="text-3xl font-bold uppercase tracking-tight">Operative Authentication</h1>
+                  <p className="text-xs text-on-surface-variant">
+                    Access classified anomaly containment logs, sensor telemetry, and encrypted dispatch.
+                  </p>
+                </div>
+
+                <div className="p-6 rounded-xl bg-surface-container border border-outline-variant/30 space-y-4 shadow-2xl relative">
+                  {currentUser && (
+                    <div className="p-4 rounded-lg bg-surface-container-low border border-secondary/40 space-y-2 mb-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-mono text-[10px] text-secondary uppercase font-bold">CURRENT AUTHENTICATED OPERATIVE</span>
+                        <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <img src={currentUser.avatar || "https://lh3.googleusercontent.com/aida-public/AB6AXuAazlzuFvu1yeDhFPtF2nOYBjP_kch0qBQcIUrm1cr0LGnR_w9xbguBgMx8WHB2GNes7UzoU9pNfdWG6ZxY3pZTWkhOBnUuIOKspiU5VgscBUmeffhqZ66JbBxNS7T2x-9vcafTlidby0Zf2IQIl5Jws189SO7dv2oIn0GkYPstv_QQMaliBvBsqCtPaByIfty7bBdC-G7XP900Y8QAUjiVMoDFJvBwiLq2AiXwqIo"} className="w-10 h-10 rounded-full object-cover border border-secondary" />
+                        <div>
+                          <div className="font-bold text-sm">{currentUser.callSign}</div>
+                          <div className="font-mono text-xs text-secondary">{currentUser.clearanceLevel || 'SEC-LEVEL 4'} • {currentUser.email}</div>
+                        </div>
+                      </div>
+                      <div className="pt-2 flex gap-2">
+                        <button onClick={() => navigateTo('home')} className="flex-1 py-1.5 rounded bg-primary text-on-primary font-mono text-xs uppercase font-bold">
+                          Return to Field HUD
+                        </button>
+                        <button onClick={handleLogout} className="px-3 py-1.5 rounded bg-surface-container-high text-tertiary border border-tertiary/30 font-mono text-xs uppercase">
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode Tabs */}
+                  <div className="flex rounded-lg bg-surface-container-lowest p-1 border border-outline-variant/20">
+                    <button
+                      onClick={() => { setAuthMode('signin'); setAuthError(''); }}
+                      className={`flex-1 py-2 rounded font-mono text-xs uppercase font-bold transition-all ${
+                        authMode === 'signin'
+                          ? 'bg-secondary/20 text-secondary border border-secondary/40'
+                          : 'text-outline hover:text-on-surface'
+                      }`}
+                    >
+                      Sign In (Operative)
+                    </button>
+                    <button
+                      onClick={() => { setAuthMode('signup'); setAuthError(''); }}
+                      className={`flex-1 py-2 rounded font-mono text-xs uppercase font-bold transition-all ${
+                        authMode === 'signup'
+                          ? 'bg-primary/20 text-primary border border-primary/40'
+                          : 'text-outline hover:text-on-surface'
+                      }`}
+                    >
+                      Sign Up (New Clearance)
+                    </button>
+                  </div>
+
+                  {/* Error & Success Banners */}
+                  {authError && (
+                    <div className="p-3 rounded bg-error-container/20 border border-error/40 text-error font-mono text-xs flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">error</span>
+                      <span>{authError}</span>
+                    </div>
+                  )}
+                  {authSuccess && (
+                    <div className="p-3 rounded bg-secondary/20 border border-secondary/40 text-secondary font-mono text-xs flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px]">verified</span>
+                      <span>{authSuccess}</span>
+                    </div>
+                  )}
+
+                  {/* SIGN IN FORM */}
+                  {authMode === 'signin' && (
+                    <form onSubmit={handleLoginSubmit} className="space-y-3">
+                      <div>
+                        <label className="font-mono text-[10px] text-outline uppercase block mb-1">
+                          Call-Sign or Official Email
+                        </label>
+                        <input
+                          type="text"
+                          value={authForm.identifier}
+                          onChange={(e) => setAuthForm({ ...authForm, identifier: e.target.value })}
+                          placeholder="agent774@btu.gov or AGENT-774"
+                          className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-secondary"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="font-mono text-[10px] text-outline uppercase block mb-1">
+                          Security Passkey / Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showPass ? 'text' : 'password'}
+                            value={authForm.password}
+                            onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                            placeholder="••••••••••••"
+                            className="w-full p-2.5 pr-10 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-secondary"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPass(!showPass)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {showPass ? 'visibility_off' : 'visibility'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full py-3 rounded-lg bg-gradient-to-r from-secondary-container to-inverse-primary text-white font-bold uppercase font-mono text-xs tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all mt-2"
+                      >
+                        Authenticate Credentials
+                      </button>
+
+                      <div className="pt-3 border-t border-outline-variant/20 flex flex-col items-center gap-1.5">
+                        <span className="font-mono text-[10px] text-outline">OR TEST DEMO CREDENTIALS:</span>
+                        <button
+                          type="button"
+                          onClick={handleDemoLogin}
+                          className="w-full py-2 rounded bg-surface-container-high border border-outline-variant/30 text-secondary font-mono text-xs flex items-center justify-center gap-1.5 hover:bg-surface-container-highest transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">bolt</span>
+                          <span>Quick Demo Sign In (AGENT-774)</span>
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  {/* SIGN UP FORM */}
+                  {authMode === 'signup' && (
+                    <form onSubmit={handleRegisterSubmit} className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-[10px] text-outline uppercase block mb-1">Call-Sign</label>
+                          <input
+                            type="text"
+                            value={authForm.callSign}
+                            onChange={(e) => setAuthForm({ ...authForm, callSign: e.target.value })}
+                            placeholder="e.g. AGENT-902"
+                            className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-outline uppercase block mb-1">Official Email</label>
+                          <input
+                            type="email"
+                            value={authForm.email}
+                            onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                            placeholder="operative@agency.gov"
+                            className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-[10px] text-outline uppercase block mb-1">Clearance Tier</label>
+                          <select
+                            value={authForm.clearanceLevel}
+                            onChange={(e) => setAuthForm({ ...authForm, clearanceLevel: e.target.value })}
+                            className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                          >
+                            <option value="SEC-LEVEL 1">SEC-LEVEL 1 (Observer)</option>
+                            <option value="SEC-LEVEL 2">SEC-LEVEL 2 (Specialist)</option>
+                            <option value="SEC-LEVEL 3">SEC-LEVEL 3 (Investigator)</option>
+                            <option value="SEC-LEVEL 4">SEC-LEVEL 4 (Lead)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-outline uppercase block mb-1">Badge ID</label>
+                          <input
+                            type="text"
+                            value={authForm.badgeNumber}
+                            onChange={(e) => setAuthForm({ ...authForm, badgeNumber: e.target.value })}
+                            placeholder="BTU-XXXX (Auto)"
+                            className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="font-mono text-[10px] text-outline uppercase block mb-1">Passkey</label>
+                          <input
+                            type="password"
+                            value={authForm.signupPassword}
+                            onChange={(e) => setAuthForm({ ...authForm, signupPassword: e.target.value })}
+                            placeholder="Min 6 chars"
+                            className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="font-mono text-[10px] text-outline uppercase block mb-1">Confirm Passkey</label>
+                          <input
+                            type="password"
+                            value={authForm.confirmPassword}
+                            onChange={(e) => setAuthForm({ ...authForm, confirmPassword: e.target.value })}
+                            placeholder="Re-type passkey"
+                            className="w-full p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 text-on-surface font-mono text-xs focus:outline-none focus:border-primary"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={authForm.acceptedProtocols}
+                          onChange={(e) => setAuthForm({ ...authForm, acceptedProtocols: e.target.checked })}
+                          className="mt-0.5 accent-primary"
+                        />
+                        <span className="font-mono text-[10px] text-outline">
+                          I accept Class IV Containment safety guidelines & non-disclosure rules.
+                        </span>
+                      </label>
+
+                      <button
+                        type="submit"
+                        className="w-full py-3 rounded-lg bg-gradient-to-r from-primary-container to-secondary text-white font-bold uppercase font-mono text-xs tracking-wider shadow-lg hover:brightness-110 active:scale-95 transition-all mt-2"
+                      >
+                        Register Clearance Credentials
+                      </button>
+                    </form>
+                  )}
+                </div>
               </div>
             )}
           </main>

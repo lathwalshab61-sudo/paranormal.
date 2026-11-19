@@ -70,6 +70,21 @@ export default function DirectivesDrawer({ isOpen, onClose }) {
               <span className="material-symbols-outlined text-primary">alternate_email</span>
               <span className="font-body-md text-body-md">Encrypted Dispatch Uplink</span>
             </NavLink>
+
+            <NavLink
+              to="/login"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `h-12 px-space-md flex items-center gap-space-sm rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-surface-container text-secondary border border-secondary/40'
+                    : 'bg-surface-container/60 hover:bg-surface-container text-on-surface hover:text-secondary'
+                }`
+              }
+            >
+              <span className="material-symbols-outlined text-secondary">vpn_key</span>
+              <span className="font-body-md text-body-md">Operative Clearance Portal</span>
+            </NavLink>
           </nav>
         </div>
 
